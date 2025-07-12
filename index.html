@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crossword Generator</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>NYT-Style Crossword Generator</h1>
+      <p>Crossword puzzle generator with PDF export</p>
+    </div>
+
+    <div class="main-content">
+      <div class="input-section">
+        <h2>📝 Input Words & Clues</h2>
+
+        <div class="sample-data">
+          <h3>💡 Sample Format</h3>
+          <p>Enter words and clues in format: WORD:Clue description (one per line)</p>
+        </div>
+
+        <div class="form-group">
+          <label for="puzzleTitle">Puzzle Title:</label>
+          <input type="text" id="puzzleTitle" value="Daily Crossword Puzzle" />
+        </div>
+
+        <div class="form-group">
+          <label for="gridSize">Grid Size:</label>
+          <select id="gridSize">
+            <option value="13">13x13</option>
+            <option value="15" selected>15x15</option>
+            <option value="17">17x17</option>
+            <option value="19">19x19</option>
+            <option value="21">21x21</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="wordsInput">Words & Clues:</label>
+          <textarea id="wordsInput" class="words-input" placeholder="Example:\nOCEAN:Large body of water\nPIANO:Instrument">
+OCEAN:Large body of water
+PIANO:Musical instrument with keys
+SPACE:The final frontier
+MUSIC:Harmonious sounds
+LIGHT:Illumination or not heavy
+DREAM:Sleep vision
+HEART:Organ that pumps blood
+DANCE:Rhythmic movement
+SMILE:Happy facial expression
+PEACE:Absence of war
+POWER:Energy or strength
+MAGIC:Supernatural force
+GRACE:Elegance or divine favor
+STORM:Violent weather
+FLAME:Burning fire
+STONE:Hard mineral matter
+RIVER:Flowing water body
+TOWER:Tall structure
+BRAVE:Showing courage
+SHINE:Emit light
+TRUST:Confidence in someone
+QUEST:Search or journey
+CHARM:Attractive quality
+SWIFT:Moving quickly
+NOBLE:Having high moral qualities
+SPARK:Small fiery particle
+GLORY:Magnificent beauty
+FAITH:Complete trust
+PRIDE:Feeling of satisfaction
+HONOR:High respect
+GRACE:Smooth movement
+TREND:General direction
+PEACE:Harmony
+SOUND:Audible vibration
+DRIVE:Operate a vehicle
+TOUCH:Physical contact
+LEARN:Gain knowledge
+STORM:Tempest
+BRAVE:Courageous
+QUICK:Fast
+SMART:Intelligent
+DREAM:Vision during sleep
+LIGHT:Brightness
+MUSIC:Organized sound
+DANCE:Movement to rhythm
+SMILE:Grin
+HEART:Love organ
+PEACE:Tranquility
+POWER:Force</textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="funFact">Fun Fact (optional):</label>
+          <textarea id="funFact" class="clues-input">Did you know? The first crossword puzzle was published in 1913 and was called a "word-cross" puzzle!</textarea>
+        </div>
+
+        <div class="controls">
+          <button class="btn" onclick="generateCrossword()">🎯 Generate Crossword</button>
+          <button class="btn btn-secondary" onclick="exportToPDF()">📄 Export to PDF</button>
+        </div>
+      </div>
+
+      <div class="preview-section">
+        <h2>🎨 Preview</h2>
+        <div id="status" class="status info">Ready to generate your crossword puzzle!</div>
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p>Generating your crossword puzzle...</p>
+        </div>
+        <div id="crosswordContainer"></div>
+        <div id="clueContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { CrosswordGenerator } from './js/grid_algorithm.js';
+    import { exportToPDF } from './js/pdf_generator.js';
+    import { renderGrid, renderClues } from './js/dom_controller.js';
+
+    let generator = new CrosswordGenerator();
+
+    function showStatus(msg, type = 'info') {
+        const status = document.getElementById("status");
+        status.textContent = msg;
+        status.className = `status ${type}`;
+    }
+
+    function showLoading(show = true) {
+        const loading = document.getElementById("loading");
+        loading.classList.toggle("show", show);
+    }
+
+    window.generateCrossword = function () {
+        const rawInput = document.getElementById("wordsInput").value;
+        const size = parseInt(document.getElementById("gridSize").value);
+        
+        generator = new CrosswordGenerator(size);
+        const entries = generator.parseInput(rawInput);
+
+        if (entries.length < 10) {
+            showStatus("Please enter at least 10 valid entries.", "error");
+            return;
+        }
+
+        showLoading(true);
+        showStatus("Generating crossword...");
+
+        setTimeout(() => {
+            const success = generator.generateCrossword(entries);
+            if (success) {
+                renderGrid(generator);
+                renderClues(generator);
+                showStatus(`Crossword generated with ${generator.placedWords.length} words.`, "success");
+            } else {
+                showStatus("Generation failed. Try different words.", "error");
+            }
+            showLoading(false);
+        }, 300);
+    };
+
+    window.exportToPDF = function () {
+        if (generator.placedWords.length === 0) {
+            showStatus("Generate a crossword first.", "error");
+            return;
+        }
+
+        const title = document.getElementById("puzzleTitle").value;
+        const fact = document.getElementById("funFact").value;
+        showStatus("Exporting PDF...", "info");
+        showLoading(true);
+
+        exportToPDF(generator, title, fact)
+            .then(() => showStatus("PDF exported successfully!", "success"))
+            .catch(() => showStatus("Failed to export PDF.", "error"))
+            .finally(() => showLoading(false));
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+        showStatus("Ready to generate your crossword!");
+    });
+  </script>
+</body>
+</html>
